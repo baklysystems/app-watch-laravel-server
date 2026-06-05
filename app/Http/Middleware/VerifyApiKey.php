@@ -55,6 +55,9 @@ class VerifyApiKey
         // Rate limiting check
         $this->checkRateLimit($project);
 
+        // Update project.last_seen_at on every successful API call
+        $project->update(['last_seen_at' => now()]);
+
         // Share project with the request
         $request->attributes->set('project', $project);
 
@@ -72,7 +75,6 @@ class VerifyApiKey
             abort(429, 'Rate limit exceeded. Try again later.');
         }
 
-        \Illuminate\Support\Facades\Cache::increment($key, 1);
-        \Illuminate\Support\Facades\Cache::expire($key, 60);
+        \Illuminate\Support\Facades\Cache::put($key, $current + 1, now()->addMinute());
     }
 }
