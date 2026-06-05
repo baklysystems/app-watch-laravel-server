@@ -1,0 +1,481 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Appswatch UI Pro Max — Design System
+   ============================================ */
+
+@layer base {
+    :root {
+        --brand-500: #6366f1;
+        --brand-600: #4f46e5;
+        --surface-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --border-color: #e2e8f0;
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+        --glow-brand: rgba(99, 102, 241, 0.12);
+    }
+
+    .dark {
+        --surface-bg: #020617;
+        --card-bg: #0f172a;
+        --border-color: #1e293b;
+        --text-primary: #f1f5f9;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --glow-brand: rgba(99, 102, 241, 0.08);
+        color-scheme: dark;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply antialiased;
+        background-color: var(--surface-bg);
+        transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    ::selection {
+        @apply bg-brand-200 dark:bg-brand-800 text-brand-900 dark:text-brand-100;
+    }
+
+    /* Focus ring */
+    *:focus-visible {
+        @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white dark:ring-offset-gray-950;
+        border-radius: 0.375rem;
+    }
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+
+@layer components {
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    .dark ::-webkit-scrollbar-thumb {
+        background: #334155;
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+        background: #475569;
+    }
+}
+
+/* ============================================
+   Component Base Classes
+   ============================================ */
+
+@layer components {
+    /* Card — glass-style with subtle shadow */
+    .card {
+        @apply bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-card dark:shadow-card-dark;
+        transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06), 0 4px 10px rgba(0, 0, 0, 0.04);
+    }
+
+    .dark .card:hover {
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35), 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-interactive {
+        @apply card cursor-pointer;
+    }
+
+    .card-interactive:hover {
+        @apply border-brand-200 dark:border-brand-800 shadow-glow;
+        transform: translateY(-2px);
+    }
+
+    /* Stat card */
+    .stat-card {
+        @apply card p-5 animate-fade-in-up;
+    }
+
+    .stat-card .stat-icon {
+        @apply w-10 h-10 rounded-xl flex items-center justify-center mb-3 ring-1 ring-black/5 dark:ring-white/5;
+    }
+
+    .stat-card .stat-label {
+        @apply text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-[0.05em] mb-1;
+    }
+
+    .stat-card .stat-value {
+        @apply text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight;
+    }
+
+    .stat-card .stat-sub {
+        @apply text-xs text-gray-400 dark:text-gray-500 mt-1;
+    }
+
+    /* Table */
+    .table-premium {
+        @apply min-w-full divide-y divide-gray-100 dark:divide-gray-800;
+    }
+
+    .table-premium thead th {
+        @apply px-5 py-3.5 text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-[0.05em] bg-gray-50/80 dark:bg-gray-900/50 backdrop-blur-sm;
+    }
+
+    .table-premium tbody td {
+        @apply px-5 py-4 whitespace-nowrap;
+    }
+
+    .table-premium tbody tr {
+        @apply border-b border-gray-50 dark:border-gray-800/50;
+        transition: background-color 0.15s ease;
+    }
+
+    .table-premium tbody tr:hover {
+        @apply bg-gray-50/50 dark:bg-gray-800/30;
+    }
+
+    /* Button variants */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ease-out-expo;
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2;
+        letter-spacing: -0.01em;
+    }
+
+    .btn:active {
+        transform: scale(0.97);
+    }
+
+    .btn-primary {
+        @apply btn bg-brand-600 text-white hover:bg-brand-700 shadow-sm shadow-brand-200 dark:shadow-brand-900/50;
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
+    }
+
+    .btn-secondary {
+        @apply btn bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700;
+    }
+
+    .btn-danger {
+        @apply btn bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-200 dark:shadow-red-900/50;
+    }
+
+    .btn-danger:hover {
+        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+    }
+
+    .btn-ghost {
+        @apply btn bg-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800;
+    }
+
+    .btn-sm {
+        @apply px-3 py-1.5 text-xs;
+    }
+
+    .btn-lg {
+        @apply px-6 py-3 text-base;
+    }
+
+    /* Badge / Tag */
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+        letter-spacing: 0.01em;
+    }
+
+    .badge-red {
+        @apply badge bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-900/40 dark:text-red-300 dark:ring-red-700/50;
+    }
+
+    .badge-green {
+        @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:ring-emerald-700/50;
+    }
+
+    .badge-amber {
+        @apply badge bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:ring-amber-700/50;
+    }
+
+    .badge-blue {
+        @apply badge bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:ring-blue-700/50;
+    }
+
+    .badge-gray {
+        @apply badge bg-gray-50 text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700/50;
+    }
+
+    /* Form inputs */
+    .input-premium {
+        @apply block w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm;
+        @apply text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500;
+        @apply focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+        @apply transition-all duration-200;
+    }
+
+    .select-premium {
+        @apply block w-full rounded-xl border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm;
+        @apply text-sm;
+        @apply focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+        @apply transition-all duration-200;
+    }
+
+    /* Page header */
+    .page-header {
+        @apply bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-800;
+        @apply supports-[backdrop-filter]:bg-white/70 supports-[backdrop-filter]:dark:bg-gray-950/70;
+    }
+
+    .page-header-inner {
+        @apply max-w-7xl mx-auto py-5 px-4 sm:px-6 lg:px-8;
+    }
+
+    /* Section header */
+    .section-title {
+        @apply text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-[0.075em];
+    }
+}
+
+/* ============================================
+   Animations & Transitions
+   ============================================ */
+
+@layer utilities {
+    /* Alpine.js x-cloak */
+    [x-cloak] {
+        display: none !important;
+    }
+
+    /* Stagger animation delay utilities */
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+    .delay-400 { animation-delay: 0.4s; }
+    .delay-500 { animation-delay: 0.5s; }
+
+    /* Truncation utility */
+    .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Gradient text */
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-500 to-purple-500;
+    }
+
+    /* Glass effect */
+    .glass {
+        @apply bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/30;
+    }
+
+    /* Skeleton loader */
+    .skeleton {
+        @apply bg-gray-200 dark:bg-gray-800 rounded-lg animate-skeleton;
+    }
+
+    /* Shimmer effect for loading */
+    .shimmer-bg {
+        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+
+    .dark .shimmer-bg {
+        background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
+        background-size: 200% 100%;
+    }
+
+    /* Hover lift */
+    .hover-lift {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        @apply shadow-soft-lg;
+    }
+}
+
+/* ============================================
+   Toast Notifications
+   ============================================ */
+
+.toast-container {
+    @apply fixed bottom-6 right-6 z-[100] flex flex-col gap-3;
+    pointer-events: none;
+}
+
+.toast {
+    @apply flex items-center gap-3 px-5 py-4 rounded-2xl shadow-soft-lg backdrop-blur-xl border;
+    @apply animate-slide-in-right;
+    pointer-events: auto;
+    min-width: 320px;
+    max-width: 420px;
+    transform-origin: right bottom;
+}
+
+.toast-success {
+    @apply bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200;
+}
+
+.toast-error {
+    @apply bg-red-50/95 dark:bg-red-950/90 border-red-200 dark:border-red-800/60 text-red-800 dark:text-red-200;
+}
+
+.toast-warning {
+    @apply bg-amber-50/95 dark:bg-amber-950/90 border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200;
+}
+
+.toast-info {
+    @apply bg-blue-50/95 dark:bg-blue-950/90 border-blue-200 dark:border-blue-800/60 text-blue-800 dark:text-blue-200;
+}
+
+.toast-exit {
+    animation: slideOutRight 0.3s ease-in forwards;
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
+/* ============================================
+   Chart Containers
+   ============================================ */
+
+.chart-container {
+    @apply relative w-full;
+}
+
+.chart-container canvas {
+    @apply w-full;
+}
+
+/* ============================================
+   Page Transitions
+   ============================================ */
+
+.page-enter {
+    animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================
+   Pulse dot indicator
+   ============================================ */
+
+.pulse-dot {
+    @apply inline-block w-2.5 h-2.5 rounded-full;
+}
+
+.pulse-dot-green {
+    @apply pulse-dot bg-emerald-500;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+    animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.pulse-dot-red {
+    @apply pulse-dot bg-red-500;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+    animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseRing {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.pulse-dot-red {
+    animation-name: pulseRingRed;
+}
+
+@keyframes pulseRingRed {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ============================================
+   Empty State
+   ============================================ */
+
+.empty-state {
+    @apply flex flex-col items-center justify-center py-16 px-6 text-center;
+}
+
+.empty-state-icon {
+    @apply w-20 h-20 rounded-2xl bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center mb-5;
+}
+
+.empty-state-title {
+    @apply text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2;
+}
+
+.empty-state-desc {
+    @apply text-sm text-gray-400 dark:text-gray-500 max-w-sm;
+}
+
+/* ============================================
+   Dropdown Menu
+   ============================================ */
+
+.dropdown-menu {
+    @apply absolute right-0 mt-2 w-56 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-soft-lg backdrop-blur-xl;
+    @apply animate-scale-in origin-top-right;
+    @apply py-1.5;
+}
+
+.dropdown-item {
+    @apply flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors;
+}
+
+.dropdown-item-danger {
+    @apply dropdown-item text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20;
+}
+
+.dropdown-divider {
+    @apply border-t border-gray-100 dark:border-gray-800 my-1.5;
+}
+
+/* ============================================
+   Metric Grid
+   ============================================ */
+
+.metric-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4;
+}
+
+/* ============================================
+   File Path Mono Text
+   ============================================ */
+
+.file-path {
+    @apply font-mono text-xs text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-1.5 py-0.5 rounded;
+}
