@@ -13,6 +13,12 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    /**
+     * Cache TTL for dashboard stats (2 minutes — frequent enough to stay fresh, 
+     * long enough to prevent query storms on high-traffic dashboards).
+     */
+    private const CACHE_TTL = 120;
+
     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -21,13 +27,15 @@ class DashboardController extends Controller
         $projectId = $request->input('project_id', session('current_project_id'));
 
         // Super admins see all active projects; regular users see their own projects
-        if ($isSuperAdmin) {
-            $projects = Project::where('is_active', true)->get();
-        } else {
-            $projects = Project::where('is_active', true)
+        $cacheKey = 'dashboard:projects:' . ($isSuperAdmin ? 'all' : $user->id);
+        $projects = cache()->remember($cacheKey, self::CACHE_TTL, function () use ($isSuperAdmin, $user) {
+            if ($isSuperAdmin) {
+                return Project::where('is_active', true)->get();
+            }
+            return Project::where('is_active', true)
                 ->where('user_id', $user->id)
                 ->get();
-        }
+        });
 
         if ($projects->isEmpty()) {
             return view('dashboard', [
@@ -47,63 +55,42 @@ class DashboardController extends Controller
         $viewMode = ($isSuperAdmin && $projectId === 'all') ? 'all' : 'single';
 
         if ($viewMode === 'all') {
-            // --- Super Admin: Aggregated view across all projects ---
-            $since = now()->subDay();
+            return $this->allProjectsView($projects, $isSuperAdmin);
+        }
 
-            $allProjectIds = $projects->pluck('id')->toArray();
+        return $this->singleProjectView($projects, $projectId, $isSuperAdmin);
+    }
 
-            $stats = [
-                'total_exceptions' => AppException::whereIn('project_id', $allProjectIds)->count(),
-                'new_exceptions_today' => AppException::whereIn('project_id', $allProjectIds)
-                    ->where('first_seen_at', '>=', $since)->count(),
-                'unresolved_exceptions' => AppException::whereIn('project_id', $allProjectIds)
-                    ->where('status', 'unresolved')->count(),
-                'critical_exceptions' => AppException::whereIn('project_id', $allProjectIds)
-                    ->where('severity', 'critical')->count(),
-                'log_volume' => LogEntry::whereIn('project_id', $allProjectIds)
-                    ->where('occurred_at', '>=', $since)->count(),
-                'queue_failures' => QueueJob::whereIn('project_id', $allProjectIds)
-                    ->where('status', 'failed')->where('created_at', '>=', $since)->count(),
-                'avg_response_time' => round(HttpRequest::whereIn('project_id', $allProjectIds)
-                    ->where('occurred_at', '>=', $since)->avg('duration_ms') ?? 0, 2),
-                'total_requests' => HttpRequest::whereIn('project_id', $allProjectIds)
-                    ->where('occurred_at', '>=', $since)->count(),
-            ];
+    /**
+     * Super admin aggregated view across all projects.
+     */
+    private function allProjectsView($projects, bool $isSuperAdmin)
+    {
+        $allProjectIds = $projects->pluck('id')->toArray();
+        $cacheKey = 'dashboard:all:' . md5(implode(',', $allProjectIds));
+        $since = now()->subDay();
 
-            // Exception trend (last 7 days) aggregated across all projects
-            $exceptionTrend = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $day = now()->subDays($i);
-                $count = AppException::whereIn('project_id', $allProjectIds)
-                    ->whereDate('first_seen_at', $day->toDateString())
-                    ->count();
-                $exceptionTrend[] = [
-                    'date' => $day->format('M d'),
-                    'count' => $count,
-                ];
-            }
+        $stats = cache()->remember($cacheKey . ':stats', self::CACHE_TTL, function () use ($allProjectIds, $since) {
+            return $this->computeStats($allProjectIds, $since);
+        });
 
-            // Request trend (last 7 days) aggregated across all projects
-            $requestTrend = [];
-            for ($i = 6; $i >= 0; $i--) {
-                $day = now()->subDays($i);
-                $avg = round(HttpRequest::whereIn('project_id', $allProjectIds)
-                    ->whereDate('occurred_at', $day->toDateString())
-                    ->avg('duration_ms') ?? 0, 2);
-                $requestTrend[] = [
-                    'date' => $day->format('M d'),
-                    'avg_ms' => $avg,
-                ];
-            }
+        $exceptionTrend = cache()->remember($cacheKey . ':exceptionTrend', self::CACHE_TTL, function () use ($allProjectIds) {
+            return $this->computeExceptionTrend($allProjectIds);
+        });
 
-            // Top exceptions with most occurrences in the last 24 hours (across all projects)
-            $topExceptions = AppException::whereIn('project_id', $allProjectIds)
-                ->where('last_seen_at', '>=', $since)
-                ->orderBy('occurrence_count', 'desc')
-                ->limit(5)
-                ->get();
+        $requestTrend = cache()->remember($cacheKey . ':requestTrend', self::CACHE_TTL, function () use ($allProjectIds) {
+            return $this->computeRequestTrend($allProjectIds);
+        });
 
-            // Recent activity across all projects
+        // Top exceptions — cache separately since they change frequently
+        $topExceptions = AppException::whereIn('project_id', $allProjectIds)
+            ->where('last_seen_at', '>=', $since)
+            ->orderBy('occurrence_count', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Recent activity across all projects — cached
+        $recentActivity = cache()->remember($cacheKey . ':recentActivity', 60, function () use ($allProjectIds) {
             $recentExceptions = AppException::whereIn('project_id', $allProjectIds)
                 ->orderBy('last_seen_at', 'desc')->limit(5)->get()
                 ->map(fn($e) => ['type' => 'exception', 'time' => $e->last_seen_at, 'data' => $e, 'project_id' => $e->project_id]);
@@ -116,27 +103,32 @@ class DashboardController extends Controller
                 ->orderBy('created_at', 'desc')->limit(5)->get()
                 ->map(fn($t) => ['type' => 'task', 'time' => $t->created_at, 'data' => $t, 'project_id' => $t->project_id]);
 
-            $recentActivity = $recentExceptions->concat($recentJobs)->concat($recentTasks)
-                ->sortByDesc('time')->take(15);
+            return $recentExceptions->concat($recentJobs)->concat($recentTasks)
+                ->sortByDesc('time')->take(15)->values();
+        });
 
-            return view('dashboard', [
-                'projects' => $projects,
-                'project' => null,
-                'stats' => $stats,
-                'recentActivity' => $recentActivity,
-                'exceptionTrend' => $exceptionTrend,
-                'requestTrend' => $requestTrend,
-                'isSuperAdmin' => $isSuperAdmin,
-                'viewMode' => 'all',
-                'allProjects' => $projects,
-                'topExceptions' => $topExceptions,
-                'uptimeStatus' => null,
-                'serverMetrics' => collect(),
-                'sslStatus' => null,
-            ]);
-        }
+        return view('dashboard', [
+            'projects' => $projects,
+            'project' => null,
+            'stats' => $stats,
+            'recentActivity' => $recentActivity,
+            'exceptionTrend' => $exceptionTrend,
+            'requestTrend' => $requestTrend,
+            'isSuperAdmin' => $isSuperAdmin,
+            'viewMode' => 'all',
+            'allProjects' => $projects,
+            'topExceptions' => $topExceptions,
+            'uptimeStatus' => null,
+            'serverMetrics' => collect(),
+            'sslStatus' => null,
+        ]);
+    }
 
-        // --- Single project view (regular user, or super admin viewing a specific project) ---
+    /**
+     * Single project dashboard view.
+     */
+    private function singleProjectView($projects, $projectId, bool $isSuperAdmin)
+    {
         if (!$projectId) {
             $project = $projects->first();
             session(['current_project_id' => $project->id]);
@@ -148,141 +140,176 @@ class DashboardController extends Controller
             }
         }
 
-        // Stats for last 24 hours
+        $cacheKey = 'dashboard:project:' . $project->id;
         $since = now()->subDay();
 
-        $stats = [
-            'total_exceptions' => AppException::where('project_id', $project->id)->count(),
-            'new_exceptions_today' => AppException::where('project_id', $project->id)
-                ->where('first_seen_at', '>=', $since)->count(),
-            'unresolved_exceptions' => AppException::where('project_id', $project->id)
-                ->where('status', 'unresolved')->count(),
-            'critical_exceptions' => AppException::where('project_id', $project->id)
-                ->where('severity', 'critical')->count(),
-            'log_volume' => LogEntry::where('project_id', $project->id)
-                ->where('occurred_at', '>=', $since)->count(),
-            'queue_failures' => QueueJob::where('project_id', $project->id)
-                ->where('status', 'failed')->where('created_at', '>=', $since)->count(),
-            'avg_response_time' => round(HttpRequest::where('project_id', $project->id)
-                ->where('occurred_at', '>=', $since)->avg('duration_ms') ?? 0, 2),
-            'total_requests' => HttpRequest::where('project_id', $project->id)
-                ->where('occurred_at', '>=', $since)->count(),
-        ];
+        // Cache the stats + trends together
+        $cachedData = cache()->remember($cacheKey, self::CACHE_TTL, function () use ($project, $since, $cacheKey) {
+            $stats = $this->computeStats([$project->id], $since);
+            $exceptionTrend = $this->computeExceptionTrend([$project->id]);
+            $requestTrend = $this->computeRequestTrend([$project->id]);
 
-        // Exception trend (last 7 days)
-        $exceptionTrend = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = now()->subDays($i);
-            $count = AppException::where('project_id', $project->id)
-                ->whereDate('first_seen_at', $day->toDateString())
-                ->count();
-            $exceptionTrend[] = [
-                'date' => $day->format('M d'),
-                'count' => $count,
-            ];
-        }
+            return compact('stats', 'exceptionTrend', 'requestTrend');
+        });
 
-        // Request trend (last 7 days)
-        $requestTrend = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day = now()->subDays($i);
-            $avg = round(HttpRequest::where('project_id', $project->id)
-                ->whereDate('occurred_at', $day->toDateString())
-                ->avg('duration_ms') ?? 0, 2);
-            $requestTrend[] = [
-                'date' => $day->format('M d'),
-                'avg_ms' => $avg,
-            ];
-        }
-
-        // Top exceptions with most occurrences in the last 24 hours (single project)
+        // Top exceptions — lightweight query, short cache
         $topExceptions = AppException::where('project_id', $project->id)
             ->where('last_seen_at', '>=', $since)
             ->orderBy('occurrence_count', 'desc')
             ->limit(5)
             ->get();
 
-        // Recent activity feed
-        $recentExceptions = AppException::where('project_id', $project->id)
-            ->orderBy('last_seen_at', 'desc')->limit(5)->get()
-            ->map(fn($e) => ['type' => 'exception', 'time' => $e->last_seen_at, 'data' => $e, 'project_id' => $project->id]);
+        // Recent activity feed — cached separately, shorter TTL
+        $recentActivity = cache()->remember($cacheKey . ':recentActivity', 60, function () use ($project) {
+            $recentExceptions = AppException::where('project_id', $project->id)
+                ->orderBy('last_seen_at', 'desc')->limit(5)->get()
+                ->map(fn($e) => ['type' => 'exception', 'time' => $e->last_seen_at, 'data' => $e, 'project_id' => $project->id]);
 
-        $recentJobs = QueueJob::where('project_id', $project->id)
-            ->orderBy('created_at', 'desc')->limit(5)->get()
-            ->map(fn($j) => ['type' => 'job', 'time' => $j->created_at, 'data' => $j, 'project_id' => $project->id]);
+            $recentJobs = QueueJob::where('project_id', $project->id)
+                ->orderBy('created_at', 'desc')->limit(5)->get()
+                ->map(fn($j) => ['type' => 'job', 'time' => $j->created_at, 'data' => $j, 'project_id' => $project->id]);
 
-        $recentTasks = ScheduledTask::where('project_id', $project->id)
-            ->orderBy('created_at', 'desc')->limit(5)->get()
-            ->map(fn($t) => ['type' => 'task', 'time' => $t->created_at, 'data' => $t, 'project_id' => $project->id]);
+            $recentTasks = ScheduledTask::where('project_id', $project->id)
+                ->orderBy('created_at', 'desc')->limit(5)->get()
+                ->map(fn($t) => ['type' => 'task', 'time' => $t->created_at, 'data' => $t, 'project_id' => $project->id]);
 
-        $recentActivity = $recentExceptions->concat($recentJobs)->concat($recentTasks)
-            ->sortByDesc('time')->take(15);
+            return $recentExceptions->concat($recentJobs)->concat($recentTasks)
+                ->sortByDesc('time')->take(15)->values();
+        });
 
-        // Subscription summary
-        $uptimeStatus = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'uptime')
-            ->where('metric_name', 'is_up')
-            ->orderBy('recorded_at', 'desc')
-            ->first();
-
-        $serverMetrics = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'server_monitor')
-            ->orderBy('recorded_at', 'desc')
-            ->limit(4)
-            ->get();
-
-        $sslStatus = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'ssl_check')
-            ->where('metric_name', 'expiry_days')
-            ->orderBy('recorded_at', 'desc')
-            ->first();
-
-        // MySQL health metrics
-        $mysqlHealth = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'mysql_health')
-            ->orderBy('recorded_at', 'desc')
-            ->limit(4)
-            ->get();
-
-        // Database backup metrics
-        $backupMetrics = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'database_backup')
-            ->orderBy('recorded_at', 'desc')
-            ->limit(2)
-            ->get();
-
-        // Domain expiry
-        $domainExpiry = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'domain_expiry')
-            ->where('metric_name', 'days_until_expiry')
-            ->orderBy('recorded_at', 'desc')
-            ->first();
-
-        // Service vitals
-        $serviceVitals = IntegrationMetric::where('project_id', $project->id)
-            ->where('integration', 'service_vitals')
-            ->orderBy('recorded_at', 'desc')
-            ->limit(5)
-            ->get();
+        // Integration metrics — cache all together in one key
+        $integrationData = cache()->remember($cacheKey . ':integrations', self::CACHE_TTL, function () use ($project) {
+            return [
+                'uptimeStatus' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'uptime')
+                    ->where('metric_name', 'is_up')
+                    ->orderBy('recorded_at', 'desc')
+                    ->first(),
+                'serverMetrics' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'server_monitor')
+                    ->orderBy('recorded_at', 'desc')
+                    ->limit(4)
+                    ->get(),
+                'sslStatus' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'ssl_check')
+                    ->where('metric_name', 'expiry_days')
+                    ->orderBy('recorded_at', 'desc')
+                    ->first(),
+                'mysqlHealth' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'mysql_health')
+                    ->orderBy('recorded_at', 'desc')
+                    ->limit(4)
+                    ->get(),
+                'backupMetrics' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'database_backup')
+                    ->orderBy('recorded_at', 'desc')
+                    ->limit(2)
+                    ->get(),
+                'domainExpiry' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'domain_expiry')
+                    ->where('metric_name', 'days_until_expiry')
+                    ->orderBy('recorded_at', 'desc')
+                    ->first(),
+                'serviceVitals' => IntegrationMetric::where('project_id', $project->id)
+                    ->where('integration', 'service_vitals')
+                    ->orderBy('recorded_at', 'desc')
+                    ->limit(5)
+                    ->get(),
+            ];
+        });
 
         return view('dashboard', [
             'projects' => $projects,
             'project' => $project,
-            'stats' => $stats,
+            'stats' => $cachedData['stats'],
             'recentActivity' => $recentActivity,
-            'exceptionTrend' => $exceptionTrend,
-            'requestTrend' => $requestTrend,
+            'exceptionTrend' => $cachedData['exceptionTrend'],
+            'requestTrend' => $cachedData['requestTrend'],
             'isSuperAdmin' => $isSuperAdmin,
             'viewMode' => 'single',
             'allProjects' => $isSuperAdmin ? $projects : collect(),
             'topExceptions' => $topExceptions,
-            'uptimeStatus' => $uptimeStatus,
-            'serverMetrics' => $serverMetrics,
-            'sslStatus' => $sslStatus,
-            'mysqlHealth' => $mysqlHealth,
-            'backupMetrics' => $backupMetrics,
-            'domainExpiry' => $domainExpiry,
-            'serviceVitals' => $serviceVitals,
+            'uptimeStatus' => $integrationData['uptimeStatus'],
+            'serverMetrics' => $integrationData['serverMetrics'],
+            'sslStatus' => $integrationData['sslStatus'],
+            'mysqlHealth' => $integrationData['mysqlHealth'],
+            'backupMetrics' => $integrationData['backupMetrics'],
+            'domainExpiry' => $integrationData['domainExpiry'],
+            'serviceVitals' => $integrationData['serviceVitals'],
         ]);
+    }
+
+    /**
+     * Compute dashboard stats for given project IDs.
+     */
+    private function computeStats(array $projectIds, $since): array
+    {
+        return [
+            'total_exceptions' => AppException::whereIn('project_id', $projectIds)->count(),
+            'new_exceptions_today' => AppException::whereIn('project_id', $projectIds)
+                ->where('first_seen_at', '>=', $since)->count(),
+            'unresolved_exceptions' => AppException::whereIn('project_id', $projectIds)
+                ->where('status', 'unresolved')->count(),
+            'critical_exceptions' => AppException::whereIn('project_id', $projectIds)
+                ->where('severity', 'critical')->count(),
+            'log_volume' => LogEntry::whereIn('project_id', $projectIds)
+                ->where('occurred_at', '>=', $since)->count(),
+            'queue_failures' => QueueJob::whereIn('project_id', $projectIds)
+                ->where('status', 'failed')->where('created_at', '>=', $since)->count(),
+            'avg_response_time' => round(HttpRequest::whereIn('project_id', $projectIds)
+                ->where('occurred_at', '>=', $since)->avg('duration_ms') ?? 0, 2),
+            'total_requests' => HttpRequest::whereIn('project_id', $projectIds)
+                ->where('occurred_at', '>=', $since)->count(),
+        ];
+    }
+
+    /**
+     * Compute exception trend (last 7 days) — single query with GROUP BY.
+     */
+    private function computeExceptionTrend(array $projectIds): array
+    {
+        $rows = AppException::whereIn('project_id', $projectIds)
+            ->where('first_seen_at', '>=', now()->subDays(7))
+            ->selectRaw('DATE(first_seen_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $trend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = now()->subDays($i)->toDateString();
+            $trend[] = [
+                'date' => now()->subDays($i)->format('M d'),
+                'count' => (int) ($rows->get($day)->count ?? 0),
+            ];
+        }
+
+        return $trend;
+    }
+
+    /**
+     * Compute request trend (last 7 days) — single query with GROUP BY.
+     */
+    private function computeRequestTrend(array $projectIds): array
+    {
+        $rows = HttpRequest::whereIn('project_id', $projectIds)
+            ->where('occurred_at', '>=', now()->subDays(7))
+            ->selectRaw('DATE(occurred_at) as date, AVG(duration_ms) as avg_ms')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->keyBy('date');
+
+        $trend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = now()->subDays($i)->toDateString();
+            $trend[] = [
+                'date' => now()->subDays($i)->format('M d'),
+                'avg_ms' => round((float) ($rows->get($day)->avg_ms ?? 0), 2),
+            ];
+        }
+
+        return $trend;
     }
 }

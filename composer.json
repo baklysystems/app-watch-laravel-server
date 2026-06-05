@@ -13,7 +13,7 @@
     ],
     "require": {
         "php": "^8.2",
-        "baklysystems/app-watch-laravel-client": "1.0.2",
+        "baklysystems/app-watch-laravel-client": "^1.0.3",
         "laravel/breeze": "^2.4",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.10",

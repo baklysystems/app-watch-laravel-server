@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d1670c45f8097f399c7be97748c89812",
+    "content-hash": "7e6bee24cafe431bc181752d5be330ee",
     "packages": [
         {
             "name": "baklysystems/app-watch-laravel-client",
-            "version": "v1.0.2",
+            "version": "v1.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/baklysystems/app-watch-laravel-client.git",
-                "reference": "91f2916e5e4a636934a1f3f75d4beb5c13855e8d"
+                "reference": "2187dc16c3cbe99a32980d2ddb865a93d70df72e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/baklysystems/app-watch-laravel-client/zipball/91f2916e5e4a636934a1f3f75d4beb5c13855e8d",
-                "reference": "91f2916e5e4a636934a1f3f75d4beb5c13855e8d",
+                "url": "https://api.github.com/repos/baklysystems/app-watch-laravel-client/zipball/2187dc16c3cbe99a32980d2ddb865a93d70df72e",
+                "reference": "2187dc16c3cbe99a32980d2ddb865a93d70df72e",
                 "shasum": ""
             },
             "require": {
@@ -75,10 +75,10 @@
                 "telemetry"
             ],
             "support": {
-                "source": "https://github.com/baklysystems/app-watch-laravel-client/tree/v1.0.2",
+                "source": "https://github.com/baklysystems/app-watch-laravel-client/tree/v1.0.3",
                 "issues": "https://github.com/baklysystems/app-watch-laravel-client/issues"
             },
-            "time": "2026-06-05T18:02:46+00:00"
+            "time": "2026-06-05T22:32:51+00:00"
         },
         {
             "name": "brick/math",

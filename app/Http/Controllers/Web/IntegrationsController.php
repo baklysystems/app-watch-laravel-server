@@ -81,20 +81,17 @@ class IntegrationsController extends Controller
         if (!$this->project) return redirect()->route('dashboard');
 
         $metrics = $this->getRecentMetrics('google_analytics');
-        $pageViews = IntegrationMetric::where('project_id', $this->project->id)
+
+        // Fetch page_views and active_users in a single query via whereIn
+        $specializedMetrics = IntegrationMetric::where('project_id', $this->project->id)
             ->where('integration', 'google_analytics')
-            ->where('metric_name', 'page_views')
+            ->whereIn('metric_name', ['page_views', 'active_users'])
             ->orderBy('recorded_at', 'desc')
-            ->limit(30)
-            ->get()
-            ->toArray();
-        $activeUsers = IntegrationMetric::where('project_id', $this->project->id)
-            ->where('integration', 'google_analytics')
-            ->where('metric_name', 'active_users')
-            ->orderBy('recorded_at', 'desc')
-            ->limit(30)
-            ->get()
-            ->toArray();
+            ->limit(60)
+            ->get();
+
+        $pageViews = $specializedMetrics->where('metric_name', 'page_views')->take(30)->values()->toArray();
+        $activeUsers = $specializedMetrics->where('metric_name', 'active_users')->take(30)->values()->toArray();
 
         return $this->view('google_analytics', 'Google Analytics', [
             'pageViews' => $pageViews,

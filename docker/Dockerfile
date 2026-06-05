@@ -65,6 +65,9 @@ RUN chown -R www-data:www-data storage bootstrap/cache && \
 # Copy nginx config
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 
+# Copy PHP-FPM pool config (overrides default www.conf)
+COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
+
 # Copy supervisor config
 COPY docker/supervisord.conf /etc/supervisord.conf
 

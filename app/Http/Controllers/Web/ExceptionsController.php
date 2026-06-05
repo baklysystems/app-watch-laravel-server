@@ -53,19 +53,22 @@ class ExceptionsController extends Controller
         $exceptions = $query->paginate(25);
         $projects = Project::where('is_active', true)->get();
 
-        // Compute stats for cards
-        $totalExceptions = AppException::where('project_id', $project->id)->count();
-        $unresolvedCount = AppException::where('project_id', $project->id)
-            ->where('status', 'unresolved')->count();
-        $criticalCount = AppException::where('project_id', $project->id)
-            ->where('severity', 'critical')->count();
-        $newTodayCount = AppException::where('project_id', $project->id)
-            ->where('first_seen_at', '>=', now()->subDay())->count();
+        // Stats for cards — cached per project for 2 minutes to avoid 4 COUNT queries per page load
+        $stats = cache()->remember('exceptions:stats:' . $project->id, 120, function () use ($project) {
+            $base = AppException::where('project_id', $project->id);
+            $since = now()->subDay();
 
-        return view('exceptions.index', compact(
+            return [
+                'totalExceptions' => (clone $base)->count(),
+                'unresolvedCount' => (clone $base)->where('status', 'unresolved')->count(),
+                'criticalCount' => (clone $base)->where('severity', 'critical')->count(),
+                'newTodayCount' => (clone $base)->where('first_seen_at', '>=', $since)->count(),
+            ];
+        });
+
+        return view('exceptions.index', array_merge(compact(
             'exceptions', 'projects', 'project',
-            'totalExceptions', 'unresolvedCount', 'criticalCount', 'newTodayCount'
-        ));
+        ), $stats));
     }
 
     public function show(string $id)
