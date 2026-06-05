@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f0377e6ac3f9d9ccc06b73fdb60986d0",
+    "content-hash": "9b3facba3d8e18d946cb6e07ba838e77",
     "packages": [
         {
             "name": "baklysystems/app-watch-laravel-client",
-            "version": "v1.0.0",
+            "version": "v1.0.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/baklysystems/app-watch-laravel-client.git",
-                "reference": "b3973a88feed48bd0e9ef6f291af110c6e28d751"
+                "reference": "7f86e6a282c3f8cbcb826d683b58b2f9ec8b7409"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/baklysystems/app-watch-laravel-client/zipball/b3973a88feed48bd0e9ef6f291af110c6e28d751",
-                "reference": "b3973a88feed48bd0e9ef6f291af110c6e28d751",
+                "url": "https://api.github.com/repos/baklysystems/app-watch-laravel-client/zipball/7f86e6a282c3f8cbcb826d683b58b2f9ec8b7409",
+                "reference": "7f86e6a282c3f8cbcb826d683b58b2f9ec8b7409",
                 "shasum": ""
             },
             "require": {
@@ -75,10 +75,10 @@
                 "telemetry"
             ],
             "support": {
-                "source": "https://github.com/baklysystems/app-watch-laravel-client/tree/v1.0.0",
+                "source": "https://github.com/baklysystems/app-watch-laravel-client/tree/v1.0.1",
                 "issues": "https://github.com/baklysystems/app-watch-laravel-client/issues"
             },
-            "time": "2026-06-04T21:13:45+00:00"
+            "time": "2026-06-05T15:31:44+00:00"
         },
         {
             "name": "brick/math",
@@ -9441,9 +9441,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "baklysystems/app-watch-laravel-client": 20
-    },
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
