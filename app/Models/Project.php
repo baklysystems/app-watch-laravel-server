@@ -21,6 +21,7 @@ class Project extends Model
         'retention_days',
         'rate_limit',
         'is_active',
+        'last_seen_at',
         'metadata',
         'integrations_config',
     ];
@@ -31,6 +32,7 @@ class Project extends Model
         'is_active' => 'boolean',
         'retention_days' => 'integer',
         'rate_limit' => 'integer',
+        'last_seen_at' => 'datetime',
     ];
 
     protected $hidden = [

@@ -536,6 +536,76 @@
                 </div>
             </div>
 
+            <!-- Connection Status & Sync Test -->
+            <div class="card" id="sync-status-card">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100">Client Connection Status</h3>
+                            <p class="text-sm text-gray-400 dark:text-gray-500 mt-0.5">Verify that your Laravel client is connected and syncing data.</p>
+                        </div>
+                        <button type="button" onclick="testSync()" class="btn-primary btn-sm" id="test-sync-btn">
+                            <span id="test-sync-text">🔍 Test Sync Now</span>
+                            <span id="test-sync-spinner" class="hidden">⏳ Testing...</span>
+                        </button>
+                    </div>
+
+                    <div id="sync-result" class="hidden mt-4">
+                        <!-- Connection badge -->
+                        <div class="flex items-center gap-2 mb-4">
+                            <div id="sync-badge" class="px-3 py-1 rounded-full text-xs font-bold"></div>
+                            <span id="sync-message" class="text-sm text-gray-600 dark:text-gray-400"></span>
+                        </div>
+
+                        <!-- Project info -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/50">
+                            <div>
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Project</span>
+                                <p id="sync-project-name" class="text-sm font-medium text-gray-900 dark:text-gray-100">—</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Last Contact</span>
+                                <p id="sync-last-seen" class="text-sm font-medium text-gray-900 dark:text-gray-100">—</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">API Key</span>
+                                <p id="sync-api-key" class="text-sm font-medium text-gray-900 dark:text-gray-100 font-mono">—</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Environment</span>
+                                <p id="sync-environment" class="text-sm font-medium text-gray-900 dark:text-gray-100">—</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Rate Limit</span>
+                                <p id="sync-rate-limit" class="text-sm font-medium text-gray-900 dark:text-gray-100">—</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">Server Time</span>
+                                <p id="sync-server-time" class="text-sm font-medium text-gray-900 dark:text-gray-100">—</p>
+                            </div>
+                        </div>
+
+                        <!-- Data Freshness -->
+                        <div class="mb-4">
+                            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Data Freshness</h4>
+                            <div id="sync-freshness" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+                        </div>
+
+                        <!-- Data Volumes -->
+                        <div class="mb-4">
+                            <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Data Volumes</h4>
+                            <div id="sync-volumes" class="grid grid-cols-2 md:grid-cols-4 gap-2"></div>
+                        </div>
+
+                        <!-- Recommendation -->
+                        <div id="sync-recommendation" class="p-4 rounded-xl border"></div>
+                    </div>
+
+                    <!-- Error state -->
+                    <div id="sync-error" class="hidden mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 text-sm"></div>
+                </div>
+            </div>
+
             <!-- Danger Zone -->
             <div class="card border-2 border-red-200 dark:border-red-800/50">
                 <div class="p-6">

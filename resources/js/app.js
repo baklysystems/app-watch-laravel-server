@@ -419,4 +419,132 @@ window.testServiceVitals = async (projectId) => {
     });
 })();
 
+// Sync Test — called from Settings page "Test Sync Now" button
+window.testSync = async () => {
+    const projectId = document.querySelector('input[name="project_id"]')?.value
+        || new URLSearchParams(window.location.search).get('project_id')
+        || (() => { const match = window.location.href.match(/project\/([a-f0-9-]+)/); return match ? match[1] : null; })();
+
+    if (!projectId) {
+        Appswatch.toast.error('Cannot determine project ID');
+        return;
+    }
+
+    const btn = document.getElementById('test-sync-btn');
+    const text = document.getElementById('test-sync-text');
+    const spinner = document.getElementById('test-sync-spinner');
+    const resultDiv = document.getElementById('sync-result');
+    const errorDiv = document.getElementById('sync-error');
+
+    // Show loading state
+    if (btn) btn.disabled = true;
+    if (text) text.classList.add('hidden');
+    if (spinner) spinner.classList.remove('hidden');
+    if (resultDiv) resultDiv.classList.add('hidden');
+    if (errorDiv) errorDiv.classList.add('hidden');
+
+    try {
+        const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const resp = await fetch(`/settings/project/${projectId}/test-sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            throw new Error(err.message || `HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        renderSyncResult(data);
+        Appswatch.toast.success('Sync test completed');
+    } catch (e) {
+        if (errorDiv) {
+            errorDiv.textContent = 'Error: ' + e.message;
+            errorDiv.classList.remove('hidden');
+        }
+        Appswatch.toast.error('Sync test failed: ' + e.message);
+    } finally {
+        if (btn) btn.disabled = false;
+        if (text) text.classList.remove('hidden');
+        if (spinner) spinner.classList.add('hidden');
+    }
+};
+
+function renderSyncResult(data) {
+    const resultDiv = document.getElementById('sync-result');
+    if (!resultDiv) return;
+    resultDiv.classList.remove('hidden');
+
+    // Badge
+    const badge = document.getElementById('sync-badge');
+    const message = document.getElementById('sync-message');
+    if (data.status === 'connected') {
+        badge.textContent = '● CONNECTED';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300';
+        message.textContent = data.message || '';
+    } else {
+        badge.textContent = '● DISCONNECTED';
+        badge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300';
+        message.textContent = data.message || '';
+    }
+
+    // Project info
+    const proj = data.project || {};
+    document.getElementById('sync-project-name').textContent = proj.name || '—';
+    document.getElementById('sync-last-seen').textContent = proj.last_seen_at
+        ? new Date(proj.last_seen_at).toLocaleString()
+        : 'Never';
+    document.getElementById('sync-environment').textContent = proj.environment || '—';
+
+    // Auth info
+    const auth = data.auth || {};
+    document.getElementById('sync-api-key').textContent = (auth.api_key_prefix || 'unknown') + '•••••••';
+    document.getElementById('sync-rate-limit').textContent = auth.rate_limit + ' req/min';
+
+    // Sync check
+    const sync = data.sync_check || {};
+    document.getElementById('sync-server-time').textContent = sync.server_time
+        ? new Date(sync.server_time).toLocaleString()
+        : '—';
+
+    // Data Freshness
+    const freshnessDiv = document.getElementById('sync-freshness');
+    if (freshnessDiv) {
+        const freshness = data.dalat_freshness || {};
+        freshnessDiv.innerHTML = Object.entries(freshness).map(([key, val]) => {
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const time = val ? new Date(val).toLocaleString() : 'No data';
+            const color = val ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500';
+            return `<div class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800/50">
+                <span class="text-xs text-gray-500 dark:text-gray-400">${label}</span>
+                <p class="text-xs font-mono ${color}">${time}</p>
+            </div>`;
+        }).join('');
+    }
+
+    // Data Volumes
+    const volumesDiv = document.getElementById('sync-volumes');
+    if (volumesDiv) {
+        const volumes = data.data_volumes || {};
+        volumesDiv.innerHTML = Object.entries(volumes).map(([key, val]) => {
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            return `<div class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800/50">
+                <span class="text-xs text-gray-500 dark:text-gray-400">${label}</span>
+                <p class="text-xs font-bold font-mono text-gray-900 dark:text-gray-100">${val.toLocaleString()}</p>
+            </div>`;
+        }).join('');
+    }
+
+    // Recommendation
+    const recDiv = document.getElementById('sync-recommendation');
+    if (recDiv && sync.recommendation) {
+        const isGood = sync.recommendation.includes('good') || sync.recommendation.includes('Everything');
+        recDiv.textContent = sync.recommendation;
+        recDiv.className = 'p-4 rounded-xl border ' + (isGood
+            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/50 text-emerald-700 dark:text-emerald-300'
+            : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-300');
+    }
+}
+
 Alpine.start();

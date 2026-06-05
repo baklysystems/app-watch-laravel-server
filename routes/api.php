@@ -2,11 +2,12 @@
 
 use App\Http\Controllers\Api\Ingestion\ExceptionController;
 use App\Http\Controllers\Api\Ingestion\LogController;
+use App\Http\Controllers\Api\Ingestion\MetricController;
+use App\Http\Controllers\Api\Ingestion\PingController;
 use App\Http\Controllers\Api\Ingestion\QueueController;
 use App\Http\Controllers\Api\Ingestion\QueryController;
 use App\Http\Controllers\Api\Ingestion\RequestController;
 use App\Http\Controllers\Api\Ingestion\ScheduleController;
-use App\Http\Controllers\Api\Ingestion\MetricController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -30,6 +31,8 @@ Route::middleware(['api', 'verify-api-key'])->group(function () {
     Route::post('/ingest/requests', RequestController::class);
     Route::post('/ingest/schedules', ScheduleController::class);
     Route::post('/ingest/metrics', MetricController::class);
+    Route::post('/ingest/ping', PingController::class);
+    Route::get('/ingest/ping', PingController::class);
 });
 
 // Telegram Bot Webhook — requires webhook secret validation in controller

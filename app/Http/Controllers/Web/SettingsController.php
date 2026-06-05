@@ -185,6 +185,37 @@ class SettingsController extends Controller
         ]);
     }
 
+    /**
+     * Proxy the sync test: call the internal ping endpoint for the given project
+     * and return a comprehensive sync status snapshot. This is called from the
+     * "Test Sync Now" button on the Settings page.
+     */
+    public function testSync(Request $request, string $id)
+    {
+        $project = Project::with('apiKeys')->findOrFail($id);
+
+        $apiKey = $project->apiKeys()->first();
+
+        if (!$apiKey) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No API key found for this project. Generate an API key first.',
+            ], 400);
+        }
+
+        // Call our own ping endpoint via internal dispatch to avoid HTTP overhead
+        $controller = new \App\Http\Controllers\Api\Ingestion\PingController();
+
+        // Simulate an authenticated API request by setting the project attribute
+        $fakeRequest = \Illuminate\Http\Request::create('/api/ingest/ping', 'GET');
+        $fakeRequest->attributes->set('project', $project);
+
+        // Set the bearer token so the ping controller finds the API key name/prefix
+        $fakeRequest->headers->set('Authorization', 'Bearer ' . $apiKey->key_prefix . 'placeholder');
+
+        return $controller($fakeRequest);
+    }
+
     public function createProject(Request $request)
     {
         $validated = $request->validate([

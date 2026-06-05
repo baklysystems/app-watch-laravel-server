@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/settings/project/{id}', [\App\Http\Controllers\Web\SettingsController::class, 'deleteProject'])->name('settings.delete-project');
     Route::patch('/settings/project/{id}/integrations', [\App\Http\Controllers\Web\SettingsController::class, 'updateIntegrations'])->name('settings.update-integrations');
     Route::post('/settings/project/{id}/test-service', [\App\Http\Controllers\Web\SettingsController::class, 'testService'])->name('settings.test-service');
+    Route::post('/settings/project/{id}/test-sync', [\App\Http\Controllers\Web\SettingsController::class, 'testSync'])->name('settings.test-sync');
 
     // Projects
     Route::post('/projects', [\App\Http\Controllers\Web\SettingsController::class, 'createProject'])->name('projects.create');

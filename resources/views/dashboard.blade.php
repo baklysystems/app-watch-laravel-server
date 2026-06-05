@@ -377,6 +377,75 @@
                 </div>
             </div>
 
+            <!-- Connection Status Bar -->
+            @php
+                $isConnected = $project->last_seen_at !== null;
+                $minutesAgo = $isConnected ? $project->last_seen_at->diffInMinutes(now()) : null;
+                if ($isConnected && $minutesAgo <= 2) {
+                    $connState = 'connected';
+                    $connLabel = 'Connected';
+                    $connIcon = '●';
+                } elseif ($isConnected && $minutesAgo <= 5) {
+                    $connState = 'slow';
+                    $connLabel = 'Slow';
+                    $connIcon = '●';
+                } elseif ($isConnected) {
+                    $connState = 'disconnected';
+                    $connLabel = 'Disconnected';
+                    $connIcon = '●';
+                } else {
+                    $connState = 'nodata';
+                    $connLabel = 'No Data';
+                    $connIcon = '○';
+                }
+            @endphp
+
+            @if($connState === 'connected')
+            <div class="mb-6 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50 bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-emerald-500 dark:text-emerald-400 text-lg">{{ $connIcon }}</span>
+                    <div>
+                        <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Client Sync: {{ $connLabel }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">Last contact {{ $project->last_seen_at->diffForHumans() }}</span>
+                    </div>
+                </div>
+                <a href="{{ route('settings.index', ['project_id' => $project->id]) }}#sync-status-card" class="text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Test Sync →</a>
+            </div>
+            @elseif($connState === 'slow')
+            <div class="mb-6 p-3 rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-amber-500 dark:text-amber-400 text-lg">{{ $connIcon }}</span>
+                    <div>
+                        <span class="text-sm font-semibold text-amber-700 dark:text-amber-300">Client Sync: {{ $connLabel }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">Last contact {{ $project->last_seen_at->diffForHumans() }}</span>
+                    </div>
+                </div>
+                <a href="{{ route('settings.index', ['project_id' => $project->id]) }}#sync-status-card" class="text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Test Sync →</a>
+            </div>
+            @elseif($connState === 'disconnected')
+            <div class="mb-6 p-3 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-red-500 dark:text-red-400 text-lg">{{ $connIcon }}</span>
+                    <div>
+                        <span class="text-sm font-semibold text-red-700 dark:text-red-300">Client Sync: {{ $connLabel }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">Last contact {{ $project->last_seen_at->diffForHumans() }}</span>
+                    </div>
+                </div>
+                <a href="{{ route('settings.index', ['project_id' => $project->id]) }}#sync-status-card" class="text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Test Sync →</a>
+            </div>
+            @else
+            <div class="mb-6 p-3 rounded-xl border border-gray-200 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/30 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-gray-400 dark:text-gray-500 text-lg">{{ $connIcon }}</span>
+                    <div>
+                        <span class="text-sm font-semibold text-gray-500 dark:text-gray-400">Client Sync: {{ $connLabel }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">No data received yet. Ensure <code class="text-xs bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">appswatch:flush-buffer</code> is scheduled.</span>
+                    </div>
+                </div>
+                <a href="{{ route('settings.index', ['project_id' => $project->id]) }}#sync-status-card" class="text-xs font-medium text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline whitespace-nowrap">Test Sync →</a>
+            </div>
+            @endif
+
             <!-- Charts Row -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="card p-5">
